@@ -17,10 +17,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
-from market_app.views import ProductList
+from market_app.views import PriceListUploadView, ProductList
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/products/', ProductList.as_view(), name='products'),
+    path('upload-pricelist/', PriceListUploadView.as_view(), name='upload-pricelist')
 ]
