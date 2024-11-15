@@ -7,8 +7,17 @@ from rest_framework import status
 from .models import (
     Parameter, Product, Category, ShopCategory, Order, OrderItem, Contact, ProductParameter, Shop
 )
-from .serializers import PriceListUploadSerializer, ProductSerializer
+from .serializers import CreateUserSerializer, PriceListUploadSerializer, ProductSerializer
 from .product_utils import update_products_from_data
+
+
+class CreateUser(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = CreateUserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ProductList(generics.ListAPIView):

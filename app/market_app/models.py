@@ -14,7 +14,7 @@ class User(AbstractUser):
         verbose_name='Юзернейм', max_length=80, blank=True, null=True
     )
     role = models.CharField(
-        verbose_name='Роль', max_length=10, choices=ROLE_CHOICES
+        verbose_name='Роль', max_length=10, choices=ROLE_CHOICES, default='client'
     )
 
     USERNAME_FIELD = 'email'

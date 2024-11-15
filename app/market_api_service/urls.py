@@ -16,12 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from rest_framework.authtoken.views import obtain_auth_token
 
-from market_app.views import PriceListUploadView, ProductList
+from market_app.views import PriceListUploadView, ProductList, CreateUser
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/products/', ProductList.as_view(), name='products'),
-    path('upload-pricelist/', PriceListUploadView.as_view(), name='upload-pricelist')
+    path('api/v1/upload-pricelist/', PriceListUploadView.as_view(), name='upload-pricelist'),
+    path('api/v1/register/', CreateUser.as_view(), name='register'),
 ]
