@@ -29,7 +29,7 @@ def update_products_from_data(data, shop_id):
         )[0]
 
         # Импорт параметров
-        for key, value in item.get('parameters', {}).items():
+        for key, value in parameters.items():
             parameter=Parameter.objects.get_or_create(name=key)[0]
             ProductParameter.objects.update_or_create(
                 product=product,

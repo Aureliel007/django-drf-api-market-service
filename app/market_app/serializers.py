@@ -48,7 +48,7 @@ class ProductParameterSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ('name')
+        fields = ('name',)
 
 class ProductSerializer(serializers.ModelSerializer):
     parameters = ProductParameterSerializer(many=True)
@@ -71,15 +71,9 @@ class ProductSerializer(serializers.ModelSerializer):
         )
 
 
-
-
-
-
-
 class PriceListUploadSerializer(serializers.Serializer):
 
     file = serializers.FileField()
-    shop_id = serializers.IntegerField()
 
     def validate_file(self, value):
         if not value.name.endswith('.yml') and not value.name.endswith('.yaml'):

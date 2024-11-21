@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.base_user import BaseUserManager
 from django.db import models
+from django.db.models import F, Sum
 
 
 class User(AbstractUser):
@@ -37,7 +38,7 @@ class User(AbstractUser):
 
 class Shop(models.Model):
     user = models.OneToOneField(
-        User, verbose_name='Пользователь', on_delete=models.CASCADE
+        User, verbose_name='Пользователь', on_delete=models.CASCADE, related_name='shop'
     )
     name = models.CharField(verbose_name='Название', max_length=255)
     is_active_shop = models.BooleanField(verbose_name='Принимает заказы', default=True)
@@ -117,7 +118,7 @@ class ProductParameter(models.Model):
 
 class Order(models.Model):
     STATUS_CHOICES = (
-        ('new', 'Создан'),
+        ('basket', 'Корзина'),
         ('in_progress', 'Собирается'),
         ('shipping', 'Передан в доставку'),
         ('completed', 'Завершен'),
@@ -127,12 +128,24 @@ class Order(models.Model):
         User, verbose_name='Пользователь', on_delete=models.CASCADE
     )
     created_at = models.DateTimeField(verbose_name='Создан', auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name='Обновлен', auto_now=True)
     status = models.CharField(
-        verbose_name='Статус', max_length=20, choices=STATUS_CHOICES, default='new'
+        verbose_name='Статус', max_length=20, choices=STATUS_CHOICES, default='basket'
     )
-    total_price = models.DecimalField(
-        verbose_name='Общая цена', max_digits=10, decimal_places=2
-    )
+
+    # total_price = models.GeneratedField(
+    #     expression = Sum(F('order_items__quantity') * F('order_items__product__price')), 
+    #     verbose_name='Сумма',
+    #     output_field=models.DecimalField(max_digits=10, decimal_places=2),
+    #     db_persist=True
+    # )
+
+    # total_price = models.DecimalField(
+    #     verbose_name='Общая цена', max_digits=10, decimal_places=2
+    # )
+    @property
+    def total_price(self):
+        return Sum(F('order_items__quantity') * F('order_items__product__price'))
 
     def __str__(self):
         return f'Заказ №{self.id} от {self.created_at.strftime("%d.%m.%Y %H:%M")} - {self.status}'
@@ -141,9 +154,10 @@ class Order(models.Model):
         verbose_name = 'Заказ'
         verbose_name_plural = 'Заказы'
 
+
 class OrderItem(models.Model):
     order = models.ForeignKey(
-        Order, verbose_name='Заказ', on_delete=models.CASCADE
+        Order, verbose_name='Заказ', on_delete=models.CASCADE, related_name='order_items'
     )
     product = models.ForeignKey(
         Product, verbose_name='Товар', on_delete=models.CASCADE
