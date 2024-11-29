@@ -1,20 +1,29 @@
-from django.shortcuts import get_object_or_404
 import yaml
+from django.shortcuts import get_object_or_404
+from django.core.mail import send_mail
 from rest_framework import generics
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated 
 from rest_framework.authtoken.models import Token
+from rest_framework.exceptions import MethodNotAllowed
+from django_filters.rest_framework import DjangoFilterBackend
 
-from .permissions import IsShopOwner
+from market_api_service.settings import EMAIL_HOST_USER
+from .permissions import IsShopOwner, IsOwner, IsOwnerOrAdminOrReadOnly
 from .models import (
     Parameter, Product, Category, ShopCategory, Order, OrderItem, Contact, 
     ProductParameter, Shop, User
 )
-from .serializers import CreateUserSerializer, PriceListUploadSerializer, ProductSerializer
+from .serializers import (
+    CreateUserSerializer, PriceListUploadSerializer, ProductSerializer,
+    ContactSerializer, OrderSerializer
+)
 from .product_utils import update_products_from_data
+from .filters import ProductFilter
 
 
 class CreateUser(APIView):
@@ -34,20 +43,119 @@ def user_login(request):
     if user is not None and user.check_password(password):
         token, _ = Token.objects.get_or_create(user=user)
         return Response({'token': token.key}, status=status.HTTP_200_OK)
-    return Response({'error': 'Некорректный логин или пароль'}, status=status.HTTP_401_UNAUTHORIZED)
+    return Response(
+        {'error': 'Некорректный логин или пароль'},
+        status=status.HTTP_401_UNAUTHORIZED
+    )
 
 
-class ProductList(generics.ListAPIView):
+class ProductList(ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsOwnerOrAdminOrReadOnly]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ProductFilter
+
+    # запрещаю метод POST, потому что загрузка товаров осуществляется через прайс-лист
+    def create(self, request, *args, **kwargs):
+        raise MethodNotAllowed('POST')
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def add_to_cart(self, request, pk=None):
         product = get_object_or_404(Product, pk=pk)
-        cart = Order.objects.get_or_create(user=request.user, status='basket')[0]
-        OrderItem.objects.get_or_create(order=cart, product=product, quantity=1)
-        return Response({'message': 'Товар добавлен в корзину'}, status=status.HTTP_201_CREATED)
+        quantity = int(request.data.get('quantity', 1))
+        if quantity > product.quantity:
+            return Response(
+                {'message': f'Недостаточно товара на складе, в наличии {product.quantity}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        cart, created = Order.objects.get_or_create(user=request.user, status='basket')
+        if created:
+            cart.save()
+        OrderItem.objects.update_or_create(order=cart, product=product, defaults={'quantity': quantity})
+        return Response(
+            {'message': 'Товар добавлен в корзину'},
+            status=status.HTTP_201_CREATED
+        )
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def remove_from_cart(self, request, pk=None):
+        product = get_object_or_404(Product, pk=pk)
+        try: 
+            cart = Order.objects.get(user=request.user, status='basket')
+        except Order.DoesNotExist:
+            return Response(
+                {'message': 'Корзина не найдена'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        try:
+            item = OrderItem.objects.get(order=cart, product=product)
+        except OrderItem.DoesNotExist:
+            return Response(
+                {'message': 'Товар не найден в корзине'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        item.delete()
+        return Response(
+            {'message': 'Товар удален из корзины'},
+            status=status.HTTP_200_OK
+        )
+
+class OrderViewSet(ReadOnlyModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user).exclude(status='basket')
+    
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def show_cart(self, request):
+        try:
+            cart = Order.objects.get(user=request.user, status='basket')
+        except Order.DoesNotExist:
+            return Response(
+                {'message': 'Корзина пуста'},
+                status=status.HTTP_200_OK
+            )
+        serializer = self.get_serializer(cart)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def confirm_order(self, request):
+        try:
+            cart = Order.objects.get(user=request.user, status='basket')
+        except Order.DoesNotExist:
+            return Response(
+                {'message': 'Корзина пуста'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        products = Product.objects.filter(orderitem__order=cart)
+
+        for product in products:
+            order_quantity = product.orderitem_set.get(order=cart).quantity
+            fact_quantity = product.quantity
+            if order_quantity > fact_quantity:
+                return Response(
+                    {'message': f'Недостаточно товара на складе, в наличии {fact_quantity}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            product.quantity -= order_quantity
+            product.save()
+
+        cart.status = 'confirmed'
+        cart.save()
+        send_mail(
+            subject='Подтверждение заказа',
+            message=f'Ваш заказ №{cart.id} был успешно подтвержден и находится в обработке.',
+            from_email=EMAIL_HOST_USER,
+            recipient_list=[request.user.email],
+            fail_silently=False,
+        )
+        return Response(
+            {'message': 'Заказ успешно оформлен'},
+            status=status.HTTP_200_OK
+        )
 
 class PriceListUploadView(APIView):
     permission_classes = [IsAuthenticated, IsShopOwner]
@@ -65,4 +173,12 @@ class PriceListUploadView(APIView):
             update_products_from_data(data, shop_id)
             return Response({"status": "Импорт завершен"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ContactList(ModelViewSet):
+    queryset = Contact.objects.all()
+    serializer_class = ContactSerializer
+    permission_classes = [IsAuthenticated, IsOwner]
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user)
 

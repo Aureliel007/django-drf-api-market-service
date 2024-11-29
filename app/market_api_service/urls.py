@@ -16,14 +16,24 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
-from market_app.views import PriceListUploadView, ProductList, CreateUser, user_login
+from market_app.views import (
+    PriceListUploadView, ProductList, CreateUser, ContactList, user_login, 
+    OrderViewSet
+)
+
+
+router = DefaultRouter()
+router.register('products', ProductList)
+router.register('contacts', ContactList)
+router.register('orders', OrderViewSet)
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/products/', ProductList.as_view(), name='products'),
     path('api/v1/upload-pricelist/', PriceListUploadView.as_view(), name='upload-pricelist'),
     path('api/v1/register/', CreateUser.as_view(), name='register'),
     path('api/v1/login/', user_login, name='login'),
+    path('api/v1/', include(router.urls)),
 ]

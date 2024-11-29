@@ -143,9 +143,7 @@ class Order(models.Model):
     # total_price = models.DecimalField(
     #     verbose_name='Общая цена', max_digits=10, decimal_places=2
     # )
-    @property
-    def total_price(self):
-        return Sum(F('order_items__quantity') * F('order_items__product__price'))
+
 
     def __str__(self):
         return f'Заказ №{self.id} от {self.created_at.strftime("%d.%m.%Y %H:%M")} - {self.status}'
@@ -171,8 +169,8 @@ class Contact(models.Model):
     city = models.CharField(verbose_name='Город', max_length=100)
     street = models.CharField(verbose_name='Улица', max_length=100)
     house = models.CharField(verbose_name='Дом', max_length=10)
-    building = models.CharField(verbose_name='Строение', max_length=10, blank=True)
-    flat = models.IntegerField(verbose_name='Квартира', blank=True)
+    building = models.CharField(verbose_name='Строение', max_length=10, blank=True, null=True)
+    flat = models.IntegerField(verbose_name='Квартира', blank=True, null=True)
     phone = models.CharField(verbose_name='Телефон', max_length=20)
 
     def __str__(self):
