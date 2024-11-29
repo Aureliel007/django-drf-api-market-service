@@ -1,7 +1,5 @@
 from django.contrib.auth.models import AbstractUser
-from django.contrib.auth.base_user import BaseUserManager
 from django.db import models
-from django.db.models import F, Sum
 
 
 class User(AbstractUser):
@@ -20,14 +18,6 @@ class User(AbstractUser):
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
-
-    # @property
-    # def is_client(self):
-    #     return self.role == 'client'
-
-    # @property
-    # def is_shop(self):
-    #     return self.role == 'shop'
 
     def __str__(self):
         return f'{self.email} ({self.role})'
@@ -133,25 +123,12 @@ class Order(models.Model):
         verbose_name='Статус', max_length=20, choices=STATUS_CHOICES, default='basket'
     )
 
-    # total_price = models.GeneratedField(
-    #     expression = Sum(F('order_items__quantity') * F('order_items__product__price')), 
-    #     verbose_name='Сумма',
-    #     output_field=models.DecimalField(max_digits=10, decimal_places=2),
-    #     db_persist=True
-    # )
-
-    # total_price = models.DecimalField(
-    #     verbose_name='Общая цена', max_digits=10, decimal_places=2
-    # )
-
-
     def __str__(self):
         return f'Заказ №{self.id} от {self.created_at.strftime("%d.%m.%Y %H:%M")} - {self.status}'
 
     class Meta:
         verbose_name = 'Заказ'
         verbose_name_plural = 'Заказы'
-
 
 class OrderItem(models.Model):
     order = models.ForeignKey(

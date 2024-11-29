@@ -1,7 +1,6 @@
 from django_filters import rest_framework as filters
 
 from .models import Product
-from .serializers import ProductSerializer
 
 
 class ProductFilter(filters.FilterSet):

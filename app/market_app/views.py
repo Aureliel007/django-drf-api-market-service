@@ -1,7 +1,6 @@
 import yaml
 from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
-from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.decorators import api_view, action
@@ -14,10 +13,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from market_api_service.settings import EMAIL_HOST_USER
 from .permissions import IsShopOwner, IsOwner, IsOwnerOrAdminOrReadOnly
-from .models import (
-    Parameter, Product, Category, ShopCategory, Order, OrderItem, Contact, 
-    ProductParameter, Shop, User
-)
+from .models import (Product, Order, OrderItem, Contact, User)
 from .serializers import (
     CreateUserSerializer, PriceListUploadSerializer, ProductSerializer,
     ContactSerializer, OrderSerializer
