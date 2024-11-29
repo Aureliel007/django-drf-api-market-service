@@ -27,6 +27,13 @@ class CreateUser(APIView):
         serializer = CreateUserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            send_mail(
+                'Добро пожаловать в Наш Магазин', 
+                f'Добро пожаловать в Наш Магазин, {user.username}!', 
+                EMAIL_HOST_USER, 
+                [user.email], 
+                fail_silently=False
+            )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -119,6 +126,20 @@ class OrderViewSet(ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def confirm_order(self, request):
+        address = request.data.get('address_id', None)
+        if not address:
+            return Response(
+                {'message': 'Укажите адрес доставки'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            contact = Contact.objects.get(id=address)
+        except Contact.DoesNotExist:
+            return Response(
+                {'message': 'Адрес не найден'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
             cart = Order.objects.get(user=request.user, status='basket')
         except Order.DoesNotExist:
@@ -143,7 +164,7 @@ class OrderViewSet(ReadOnlyModelViewSet):
         cart.save()
         send_mail(
             subject='Подтверждение заказа',
-            message=f'Ваш заказ №{cart.id} был успешно подтвержден и находится в обработке.',
+            message=f'Ваш заказ №{cart.id} был успешно подтвержден и находится в обработке.\n',
             from_email=EMAIL_HOST_USER,
             recipient_list=[request.user.email],
             fail_silently=False,
