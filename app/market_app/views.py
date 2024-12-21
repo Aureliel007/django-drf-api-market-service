@@ -18,7 +18,7 @@ from .serializers import (
     CreateUserSerializer, PriceListUploadSerializer, ProductSerializer,
     ContactSerializer, OrderSerializer
 )
-from .product_utils import update_products_from_data
+from .tasks import update_products_from_data
 from .filters import ProductFilter
 
 
@@ -187,7 +187,7 @@ class PriceListUploadView(APIView):
             file_data = file.read().decode("utf-8")
             data = yaml.safe_load(file_data)
 
-            update_products_from_data(data, shop_id)
+            update_products_from_data.delay(data, shop_id)
             return Response({"status": "Импорт завершен"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

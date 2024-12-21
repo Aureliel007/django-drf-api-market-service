@@ -3,3 +3,6 @@ __pycache__/
 .vscode
 *.pyc
 .env
+docker-compose.yml
+Dockerfile
+nginx.conf
