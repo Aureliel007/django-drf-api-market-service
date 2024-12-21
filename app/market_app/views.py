@@ -18,7 +18,7 @@ from .serializers import (
     CreateUserSerializer, PriceListUploadSerializer, ProductSerializer,
     ContactSerializer, OrderSerializer
 )
-from .tasks import update_products_from_data
+from .tasks import update_products_from_data, send_email
 from .filters import ProductFilter
 
 
@@ -27,12 +27,10 @@ class CreateUser(APIView):
         serializer = CreateUserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            send_mail(
-                'Добро пожаловать в Наш Магазин', 
-                f'Добро пожаловать в Наш Магазин, {user.username}!', 
-                EMAIL_HOST_USER, 
-                [user.email], 
-                fail_silently=False
+            send_email.delay(
+                subject='Добро пожаловать в Наш Магазин',
+                user_email=user.email,
+                message=f'Добро пожаловать в Наш Магазин, {user.username}!'
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -162,12 +160,10 @@ class OrderViewSet(ReadOnlyModelViewSet):
 
         cart.status = 'confirmed'
         cart.save()
-        send_mail(
+        send_email.delay(
             subject='Подтверждение заказа',
             message=f'Ваш заказ №{cart.id} был успешно подтвержден и находится в обработке.\n',
-            from_email=EMAIL_HOST_USER,
-            recipient_list=[request.user.email],
-            fail_silently=False,
+            user_email=request.user.email
         )
         return Response(
             {'message': 'Заказ успешно оформлен'},

@@ -1,5 +1,7 @@
 from celery import shared_task
+from django.core.mail import send_mail
 
+from market_api_service.settings import EMAIL_HOST_USER
 from .models import Category, Product, ShopCategory, ProductParameter, Parameter
 
 
@@ -40,3 +42,13 @@ def update_products_from_data(data, shop_id):
                 parameter=parameter,
                 defaults={'value': value}
             )
+
+@shared_task
+def send_email(subject, user_email, message):
+    send_mail(
+            subject=subject,
+            message=message,
+            from_email=EMAIL_HOST_USER,
+            recipient_list=[user_email],
+            fail_silently=False,
+        )
