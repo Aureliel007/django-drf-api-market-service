@@ -10,6 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import MethodNotAllowed
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from market_api_service.settings import EMAIL_HOST_USER
 from .permissions import IsShopOwner, IsOwner, IsOwnerOrAdminOrReadOnly
@@ -21,8 +22,24 @@ from .serializers import (
 from .tasks import update_products_from_data, send_email
 from .filters import ProductFilter
 
-
+@extend_schema(
+    request=CreateUserSerializer,
+    responses={
+        status.HTTP_200_OK: CreateUserSerializer,
+        status.HTTP_400_BAD_REQUEST: CreateUserSerializer
+    },
+)
 class CreateUser(APIView):
+    """
+    post:
+    Создать новую учетную запись пользователя.
+
+    Отправляет приветственное письмо после успешного создания учетной записи.
+
+    Responses:
+        201: Пользователь успешно создан.
+        400: Валидация не пройдена.
+    """
     def post(self, request, *args, **kwargs):
         serializer = CreateUserSerializer(data=request.data)
         if serializer.is_valid():
@@ -35,12 +52,37 @@ class CreateUser(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+@extend_schema(
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'email': {'type': 'string', 'description': 'Электронная почта'},
+                'password': {'type': 'string', 'format': 'password', 'description': 'Пароль'},
+            },
+            'required': ['email', 'password'],
+        }
+    },
+    responses={
+        status.HTTP_200_OK: {'type': 'object', 'properties': {'token': {'type': 'string'}}},
+        status.HTTP_401_UNAUTHORIZED: {'type': 'object', 'properties': {'error': {'type': 'string'}}},
+    },
+)
 @api_view(['POST'])
 def user_login(request):
+    """
+    post:
+    Аутентификация пользователя по email и паролю.
+
+    Responses:
+        200: Успешная аутентификация, возвращает токен.
+        401: Переданы некорректные данные.
+    """
     data = request.data
-    username = data.get('username')
+    email = data.get('email')
     password = data.get('password')
-    user = User.objects.filter(username=username).first()
+    user = User.objects.filter(email=email).first()
     if user is not None and user.check_password(password):
         token, _ = Token.objects.get_or_create(user=user)
         return Response({'token': token.key}, status=status.HTTP_200_OK)
@@ -49,8 +91,61 @@ def user_login(request):
         status=status.HTTP_401_UNAUTHORIZED
     )
 
+class ContactList(ModelViewSet):
+    """
+    Набор представлений для управления контактами пользователя.
+    Требуется авторизация.
+
+    list:
+    Получить список всех контактов для аутентифицированного пользователя.
+
+    create:
+    Добавить новый контакт для аутентифицированного пользователя.
+
+    update:
+    Обновить существующий контакт.
+
+    delete:
+    Удалить контакт.
+
+    Ответы:
+        200: Запрос выполнен успешно.
+        201: Ресурс успешно создан.
+        400: Произошли ошибки валидации.
+        404: Ресурс не найден.
+    """
+    queryset = Contact.objects.all()
+    serializer_class = ContactSerializer
+    permission_classes = [IsAuthenticated, IsOwner]
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user)
 
 class ProductList(ModelViewSet):
+    """
+    Набор представлений для управления товарами.
+
+    list:
+    Получить список всех товаров. Доступны фильтры:
+        - name: поиск по названию (содержит).
+        - min_price: минимальная цена.
+        - max_price: максимальная цена.
+        - category: категория (по названию).
+
+    retrieve:
+    Получить детали конкретного товара по ID.
+
+    add_to_cart:
+    Добавить товар в корзину пользователя.
+
+    remove_from_cart:
+    Удалить товар из корзины пользователя.
+
+    Ответы:
+        200: Запрос выполнен успешно.
+        400: Неверный запрос.
+        404: Товар не найден.
+    """
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     permission_classes = [IsOwnerOrAdminOrReadOnly]
@@ -61,7 +156,7 @@ class ProductList(ModelViewSet):
     def create(self, request, *args, **kwargs):
         raise MethodNotAllowed('POST')
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated], description='Добавить товар в корзину')
     def add_to_cart(self, request, pk=None):
         product = get_object_or_404(Product, pk=pk)
         quantity = int(request.data.get('quantity', 1))
@@ -79,7 +174,7 @@ class ProductList(ModelViewSet):
             status=status.HTTP_201_CREATED
         )
     
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated], description='Удалить товар из корзины')
     def remove_from_cart(self, request, pk=None):
         product = get_object_or_404(Product, pk=pk)
         try: 
@@ -103,6 +198,28 @@ class ProductList(ModelViewSet):
         )
 
 class OrderViewSet(ReadOnlyModelViewSet):
+    """
+    Набор представлений для просмотра и управления заказами пользователя.
+    Требуется авторизация.
+
+    list:
+    Получить список подтвержденных заказов для аутентифицированного пользователя.
+
+    retrieve:
+    Получить детали конкретного заказа по ID.
+
+    show_cart:
+    Показать текущую корзину пользователя.
+
+    confirm_order:
+    Подтвердить корзину пользователя и перевести в статус заказа.
+    Требуется указать id добавленного адреса.
+
+    Ответы:
+        200: Запрос выполнен успешно.
+        400: Неверный запрос.
+        404: Ресурс не найден.
+    """
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
@@ -110,7 +227,7 @@ class OrderViewSet(ReadOnlyModelViewSet):
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user).exclude(status='basket')
     
-    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated], description='Показать корзину')
     def show_cart(self, request):
         try:
             cart = Order.objects.get(user=request.user, status='basket')
@@ -122,7 +239,21 @@ class OrderViewSet(ReadOnlyModelViewSet):
         serializer = self.get_serializer(cart)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    @extend_schema(
+        request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'address_id': {
+                    'type': 'integer',
+                    'description': 'ID адреса доставки, который нужно использовать для подтверждения заказа.'
+                },
+            },
+            'required': ['address_id'],
+        }
+    },
+    )
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated], description='Подтвердить заказ')
     def confirm_order(self, request):
         address = request.data.get('address_id', None)
         if not address:
@@ -171,6 +302,17 @@ class OrderViewSet(ReadOnlyModelViewSet):
         )
 
 class PriceListUploadView(APIView):
+    """
+    Загрузить прайс-лист для обновления товаров.
+    Доступно только для владельцев магазина.
+
+    post:
+    Обрабатывает переданный YML-файл и обновляет каталог товаров магазина.
+
+    Ответы:
+        200: Файл для импорта отправлен.
+        400: Произошли ошибки валидации.
+    """
     permission_classes = [IsAuthenticated, IsShopOwner]
     def post(self, request, *args, **kwargs):
         serializer = PriceListUploadSerializer(data=request.data)
@@ -184,14 +326,5 @@ class PriceListUploadView(APIView):
             data = yaml.safe_load(file_data)
 
             update_products_from_data.delay(data, shop_id)
-            return Response({"status": "Импорт завершен"}, status=status.HTTP_200_OK)
+            return Response({"status": "Файл для импорта отправлен"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class ContactList(ModelViewSet):
-    queryset = Contact.objects.all()
-    serializer_class = ContactSerializer
-    permission_classes = [IsAuthenticated, IsOwner]
-
-    def get_queryset(self):
-        return self.queryset.filter(user=self.request.user)
-

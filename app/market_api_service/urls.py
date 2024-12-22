@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from market_app.views import (
     PriceListUploadView, ProductList, CreateUser, ContactList, user_login, 
@@ -36,4 +37,6 @@ urlpatterns = [
     path('api/v1/register/', CreateUser.as_view(), name='register'),
     path('api/v1/login/', user_login, name='login'),
     path('api/v1/', include(router.urls)),
+    path('api/v1/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/v1/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='docs'),
 ]

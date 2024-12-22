@@ -24,7 +24,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
         if value not in [User.ROLE_CHOICES[0][0], User.ROLE_CHOICES[1][0]]:
             raise serializers.ValidationError('Неверное значение роли')
         return value
-    
+       
     def create(self, validated_data):
         if validated_data.get('role', 'client') == User.ROLE_CHOICES[1][0]:
             try:
@@ -34,7 +34,10 @@ class CreateUserSerializer(serializers.ModelSerializer):
             except KeyError:
                 raise serializers.ValidationError('Введите данные магазина')
         else:
-            user = User.objects.create_user(**validated_data)
+            try:
+                user = User.objects.create_user(**validated_data)
+            except TypeError:
+                raise serializers.ValidationError('Введите данные пользователя')
         return user
 
 
@@ -100,9 +103,10 @@ class ContactSerializer(serializers.ModelSerializer):
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product = serializers.CharField(source='product.name')
+    price = serializers.DecimalField(source='product.price', max_digits=10, decimal_places=2)
     class Meta:
         model = OrderItem
-        fields = ('product', 'quantity')
+        fields = ('product', 'quantity', 'price')
 
 class OrderSerializer(serializers.ModelSerializer):
     order_items = OrderItemSerializer(many=True)
