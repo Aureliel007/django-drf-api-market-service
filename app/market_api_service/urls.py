@@ -32,6 +32,7 @@ router.register('orders', OrderViewSet)
 
 
 urlpatterns = [
+    path(r'jet/', include('jet.urls', 'jet')),
     path('admin/', admin.site.urls),
     path('api/v1/upload-pricelist/', PriceListUploadView.as_view(), name='upload-pricelist'),
     path('api/v1/register/', CreateUser.as_view(), name='register'),
