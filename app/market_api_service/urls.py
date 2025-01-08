@@ -30,6 +30,8 @@ router.register('products', ProductList)
 router.register('contacts', ContactList)
 router.register('orders', OrderViewSet)
 
+def trigger_error(request):
+    division_by_zero = 1 / 0
 
 urlpatterns = [
     path(r'jet/', include('jet.urls', 'jet')),
@@ -42,4 +44,5 @@ urlpatterns = [
     path('api/v1/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/v1/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='docs'),
     path('api/v1/', include('social_django.urls', namespace='social')),
+    path('sentry-debug/', trigger_error),
 ]
