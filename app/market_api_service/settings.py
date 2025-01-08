@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'django_filters',
     'drf_spectacular',
     'social_django',
+    'easy_thumbnails',
 ]
 
 MIDDLEWARE = [
@@ -194,4 +195,21 @@ SOCIAL_AUTH_JSONFIELD_ENABLED = True
 SOCIAL_AUTH_GITHUB_KEY = os.getenv('GITHUB_CLIENT_ID')
 SOCIAL_AUTH_GITHUB_SECRET = os.getenv('GITHUB_CLIENT_SECRET')
 
+# JET admin panel settings
 JET_DEFAULT_THEME = 'light-violet'
+
+# Thumbnails settings
+THUMBNAIL_ALIASES = {
+    '': {
+        'default': {
+            'size': (800, 800),
+            'crop': True,
+        },
+        'thumbnail': {
+            'size': (200, 200),
+            'crop': True,
+        },
+    },
+}
+
+THUMBNAIL_BASEDIR = 'thumbnails'

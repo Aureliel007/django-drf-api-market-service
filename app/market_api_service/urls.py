@@ -21,7 +21,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from market_app.views import (
     PriceListUploadView, ProductList, CreateUser, ContactList, user_login, 
-    OrderViewSet
+    OrderViewSet, UserRetrieveUpdate
 )
 
 
@@ -37,6 +37,7 @@ urlpatterns = [
     path('api/v1/upload-pricelist/', PriceListUploadView.as_view(), name='upload-pricelist'),
     path('api/v1/register/', CreateUser.as_view(), name='register'),
     path('api/v1/login/', user_login, name='login'),
+    path('api/v1/user/<int:pk>/', UserRetrieveUpdate.as_view(), name='user'),
     path('api/v1/', include(router.urls)),
     path('api/v1/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/v1/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='docs'),

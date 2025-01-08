@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
 from rest_framework import status
@@ -52,6 +53,28 @@ class CreateUser(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@extend_schema(
+    request=CreateUserSerializer,
+    responses={
+        status.HTTP_200_OK: CreateUserSerializer,
+        status.HTTP_400_BAD_REQUEST: CreateUserSerializer
+    }
+)
+class UserRetrieveUpdate(RetrieveUpdateAPIView):
+    """
+    get:
+    Получить информацию о пользователе.
+
+    patch:
+    Обновить информацию о пользователе.
+
+    Responses:
+        200: Пользователь успешно обновлен.
+        400: Валидация не пройдена.
+    """
+    queryset = User.objects.all()
+    serializer_class = CreateUserSerializer
+    permission_classes = [IsAuthenticated, IsOwner]
 
 @extend_schema(
     request={

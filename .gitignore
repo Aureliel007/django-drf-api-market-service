@@ -6,3 +6,5 @@ __pycache__/
 docker-compose.yml
 Dockerfile
 nginx.conf
+app/images/
+app/thumbnails/

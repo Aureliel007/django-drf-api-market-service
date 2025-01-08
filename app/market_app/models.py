@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from easy_thumbnails.fields import ThumbnailerImageField
 
 
 class User(AbstractUser):
@@ -14,6 +15,13 @@ class User(AbstractUser):
     )
     role = models.CharField(
         verbose_name='Роль', max_length=10, choices=ROLE_CHOICES, default='client'
+    )
+    image = ThumbnailerImageField(
+        verbose_name='Аватар', upload_to='app/images/users/', blank=True, null=True,
+        resize_source={
+            'size': (1024, 1024),
+            'sharpen': True,
+        }
     )
 
     USERNAME_FIELD = 'email'
@@ -76,6 +84,13 @@ class Product(models.Model):
         Shop, verbose_name='Поставщик', on_delete=models.CASCADE, related_name='products'
     )
     quantity = models.PositiveIntegerField(verbose_name='Доступное количество')
+    image = ThumbnailerImageField(
+        verbose_name='Изображение', upload_to='app/images/products/', blank=True, null=True,
+        resize_source={
+            'size': (1024, 1024),
+            'sharpen': True,
+        }
+    )
 
     def __str__(self):
         return self.name

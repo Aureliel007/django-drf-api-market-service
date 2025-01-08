@@ -8,7 +8,10 @@ class IsShopOwner(permissions.BasePermission):
 
 class IsOwner(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        return obj.user == request.user
+        try:
+            return obj.user == request.user
+        except AttributeError:
+            return obj == request.user
     
 class IsOwnerOrAdminOrReadOnly(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):

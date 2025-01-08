@@ -15,10 +15,11 @@ class CreateUserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, min_length=8)
     shop = ShopSerializer(required=False)
     role = serializers.CharField(required=False)
+    image = serializers.ImageField(required=False)
 
     class Meta:
         model = User
-        fields = ('email', 'username', 'role', 'password', 'shop')
+        fields = ('email', 'username', 'role', 'password', 'shop', 'image')
 
     def validate_role(self, value):
         if value not in [User.ROLE_CHOICES[0][0], User.ROLE_CHOICES[1][0]]:
@@ -58,12 +59,14 @@ class ProductSerializer(serializers.ModelSerializer):
     parameters = ProductParameterSerializer(many=True, required=False)
     category = CategorySerializer()
     shop = ShopSerializer()
+    image = serializers.ImageField(required=False)
 
     class Meta:
         model = Product
         fields = (
             'id',
             'external_id',
+            'image',
             'name',
             'model',
             'category',

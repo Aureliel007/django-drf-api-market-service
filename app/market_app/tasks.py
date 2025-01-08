@@ -1,5 +1,7 @@
 from celery import shared_task
 from django.core.mail import send_mail
+from easy_thumbnails.files import generate_all_aliases
+from easy_thumbnails.exceptions import InvalidImageFormatError
 
 from market_api_service.settings import EMAIL_HOST_USER
 from .models import Category, Product, ShopCategory, ProductParameter, Parameter
@@ -52,3 +54,11 @@ def send_email(subject, user_email, message):
             recipient_list=[user_email],
             fail_silently=False,
         )
+
+@shared_task
+def generate_thumbnails(image_path):
+    try:
+        generate_all_aliases(image_path, include_global=True)
+        return f"Thumbnails generated for {image_path}"
+    except InvalidImageFormatError:
+        return f"Invalid image format for {image_path}"
