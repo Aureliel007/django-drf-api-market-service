@@ -30,7 +30,7 @@ class Shop(models.Model):
     user = models.OneToOneField(
         User, verbose_name='Пользователь', on_delete=models.CASCADE, related_name='shop'
     )
-    name = models.CharField(verbose_name='Название', max_length=255)
+    name = models.CharField(verbose_name='Магазин', max_length=255)
     is_active_shop = models.BooleanField(verbose_name='Принимает заказы', default=True)
 
     def __str__(self):
@@ -41,10 +41,14 @@ class Shop(models.Model):
         verbose_name_plural = "Магазины"
 
 class Category(models.Model):
-    name = models.CharField(verbose_name='Название', max_length=255)
+    name = models.CharField(verbose_name='Категория', max_length=255)
     
     def __str__(self):
         return self.name
+
+    class Meta:
+        verbose_name = 'Категория'
+        verbose_name_plural = "Категории"
 
 class ShopCategory(models.Model):
     shop = models.ForeignKey(
@@ -152,3 +156,7 @@ class Contact(models.Model):
 
     def __str__(self):
         return f'{self.city}, улица {self.street}, дом {self.house} {self.building}, кв. {self.flat}'
+
+    class Meta:
+        verbose_name = 'Контакт'
+        verbose_name_plural = 'Контакты'
