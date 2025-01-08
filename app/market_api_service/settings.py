@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'social_django',
     'easy_thumbnails',
+    'cachalot',
 ]
 
 MIDDLEWARE = [
@@ -223,3 +224,14 @@ sentry_sdk.init(
         "continuous_profiling_auto_start": True,
     },
 )
+
+# Cache settings
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
