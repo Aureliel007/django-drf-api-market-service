@@ -22,6 +22,7 @@
 - **[Celery](https://docs.celeryq.dev/en/stable/)** для асинхронной обработки задач
 - **[Sentry](https://docs.sentry.io/platforms/python/integrations/django/)** для логирования ошибок
 - **[drf-spectacular](https://drf-spectacular.readthedocs.io/en/latest/readme.html)** для автодокументации и просмотра эндпоинтов API.
+- **[Django JET Reboot](https://django-jet-reboot.readthedocs.io/en/latest/)**  - улучшенная панель администрирования.
 
 ## Переменные окружения
 Шаблон .env файла с необходимыми переменными окружения:
@@ -44,9 +45,13 @@ SENTRY_DSN=
 
 Проект использует стандартную модель пользователя Django и стандартную аутентификацию по токенам на базе Django Rest Framework, а также предоставляет регистрацию и вход через OAuth (GitHub). Для работы с аутентификацией используется [Python Social Auth](https://python-social-auth.readthedocs.io/en/latest/configuration/django.html).
 
+Осуществлена возможность добавления аватара пользователя, библиотека [Easy Thumbnails](https://easy-thumbnails.readthedocs.io/en/latest/) автоматически создает миниатюры изображения в размерах 800x800 и 200x200 (рамзеры можно поменять в файле settings.py). Изображение сохраняется в папку ./app/images/users/ миниатюры - в папку ./app/thumbnales/
+
 ### Управление товарами
 
 Включает модели для хранения информации о товарах, таких как название, описание, цена и изображения. Реализованы CRUD-операции через ViewSets.
+
+Осуществлена возможность добавления изображений товаров, библиотека [Easy Thumbnails](https://easy-thumbnails.readthedocs.io/en/latest/) автоматически создает миниатюры изображения в размерах 800x800 и 200x200 (рамзеры можно поменять в файле settings.py). Изображение сохраняется в папку ./app/images/products/ миниатюры - в папку ./app/thumbnales/
 
 ### Заказы
 
